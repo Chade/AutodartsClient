@@ -25,22 +25,25 @@ namespace autodarts {
     }
 
     void fromJson(const JsonObjectConst& root) {
-      if (root[F("type")] == F("cam_stats")) {
-        _id     = root[F("data")][F("id")];
-        _fps    = root[F("data")][F("fps")];
-        _width  = root[F("data")][F("resolution")][F("width")];
-        _height = root[F("data")][F("resolution")][F("height")];
+      if (root["type"] == "cam_stats") {
+        _id     = root["data"]["id"];
+        _fps    = root["data"]["fps"];
+        _width  = root["data"]["resolution"]["width"];
+        _height = root["data"]["resolution"]["height"];
         _onCameraStatsCallback(_id, _fps, _width, _height);
+      }
+      else {
+        LOG_WARNING("Camera", F("Unknown message type:") << root["type"].as<String>());
       }
     }
 
     void toJson(JsonObject& root) const {
       JsonObject data = root.createNestedObject("data");
-      data[F("id")] = _id;
-      data[F("fps")] = _fps;
-      data[F("resolution")][F("width")] = _width;
-      data[F("resolution")][F("height")] = _height;
-      root[F("type")] = F("cam_stats");
+      data["id"] = _id;
+      data["fps"] = _fps;
+      data["resolution"]["width"] = _width;
+      data["resolution"]["height"] = _height;
+      root["type"] = "cam_stats";
     }
 
     void onCameraStats(CameraStatsCallback callback) {
@@ -89,29 +92,34 @@ namespace autodarts {
     }
 
     void fromJson(const JsonObjectConst& root) {
-      if (root[F("type")] == F("cam_state")) {
+      if (root["type"] == "cam_state") {
+        LOG_DEBUG(__FUNCTION__, "Camera state changed");
         _wasOpened  = _isOpened;
         _wasRunning = _isRunning;
-        _isOpened   = root[F("data")][F("isOpened")];
-        _isRunning  = root[F("data")][F("isRunning")];
+        _isOpened   = root["data"]["isOpened"];
+        _isRunning  = root["data"]["isRunning"];
         
         State opened  = static_cast<State>(2*_isOpened  - _wasOpened);
         State running = static_cast<State>(2*_isRunning - _wasRunning);
         _onCameraSystemStateCallback(opened, running);
       }
       else if (root["type"] == "cam_stats") {
-        int8_t id = root[F("data")][F("id")];
+        LOG_DEBUG(__FUNCTION__, "Camera stats");
+        int8_t id = root["data"]["id"];
         if (id >= 0 && id < _cameras.size()) {
           _cameras[id].fromJson(root);
         }
       }
+      else {
+        LOG_WARNING("CameraSystem", F("Unknown message type:") << root["type"].as<String>());
+      }
     }
 
     void toJson(JsonObject& root) const {
-      JsonObject data = root.createNestedObject(F("data"));
-      data[F("isOpened")]  = _isOpened;
-      data[F("isRunning")] = _isRunning;
-      root[F("type")]      = F("cam_state");
+      JsonObject data = root.createNestedObject("data");
+      data["isOpened"]  = _isOpened;
+      data["isRunning"] = _isRunning;
+      root["type"]      = "cam_state";
     }
 
     void onCameraStats(CameraStatsCallback callback) {

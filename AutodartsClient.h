@@ -1,3 +1,4 @@
+#include "HTTPClient.h"
 #include <memory>
 #ifndef AutodartsClient_h_
 #define AutodartsClient_h_
@@ -15,7 +16,7 @@ namespace autodarts {
   class Client {
 
   public:
-    typedef std::pair<String, unsigned long> Token;
+    typedef std::pair<String, uint64_t> Token;
     typedef std::unique_ptr<Board> BoardPtr;
     typedef std::vector<BoardPtr> BoardArray;
 
@@ -124,9 +125,9 @@ namespace autodarts {
       }
     }
 
-    int autoDetectBoards(const String& username, const String& password) {
+    int autoDetectBoards(const String& username, const String& password, bool forceUpdate = false) {
       // Get access token to connect to autodarts.io account
-      int ret = requestAccessToken(username, password, _accessToken);
+      int ret = requestAccessToken(username, password, _accessToken, forceUpdate);
       if (ret != HTTP_CODE_OK) {
         LOG_ERROR(__FUNCTION__, F("Could not get token to connect to autodarts.io"));
         return ret;
@@ -187,6 +188,7 @@ namespace autodarts {
     int requestAccessToken(const String& username, const String& password, Token& accessToken, bool forceUpdate = false) const {
       // Check if token is still valid    
       if (!forceUpdate && accessToken.second > millis()) {
+        LOG_INFO(__FUNCTION__, F("Skip requesting new token"));
         return HTTP_CODE_OK;
       }
 
@@ -204,15 +206,20 @@ namespace autodarts {
       if (ret == HTTP_CODE_OK) {
         // Prepare filter   
         DynamicJsonDocument filter(32);
-        filter[F("access_token")] = true;
-        filter[F("expires_in")] = true;
+        filter["access_token"] = true;
+        filter["expires_in"] = true;
         
         // Read json from stream
         DynamicJsonDocument doc(4096);
-        deserializeJson(doc, httpClient.getStream(), DeserializationOption::Filter(filter));
-        
-        accessToken.first = String(doc[F("access_token")].as<const char*>());
-        accessToken.second = millis() + doc[F("expires_in")].as<unsigned int>() * 1000;
+        DeserializationError err = deserializeJson(doc, httpClient.getStream(), DeserializationOption::Filter(filter));
+
+        if (err) {
+          LOG_ERROR(__FUNCTION__, F("Could not deserialize access token: ") << err.c_str());
+          return HTTP_CODE_INTERNAL_SERVER_ERROR;
+        }
+
+        accessToken.first = String(doc["access_token"].as<const char*>());
+        accessToken.second = millis() + doc["expires_in"].as<uint64_t>() * 1000;
       }
       else {
         LOG_ERROR(__FUNCTION__, F("Could not retrieve access token [") << ret << F("]: ") << httpClient.getString());
@@ -233,7 +240,7 @@ namespace autodarts {
       HTTPClient httpClient;
       httpClient.useHTTP10(true);
       httpClient.begin(AUTODARTS_API_TICKET_URL);
-      httpClient.addHeader(F("Authorization"), F("Bearer ") + accessToken.first);
+      httpClient.addHeader("Authorization", "Bearer " + accessToken.first);
       int ret = httpClient.POST("");
       
       if (ret == HTTP_CODE_OK) {
@@ -258,16 +265,16 @@ namespace autodarts {
       HTTPClient httpClient;
       httpClient.useHTTP10(true);
       httpClient.begin(AUTODARTS_API_BOARDS_URL);
-      httpClient.addHeader(F("Authorization"), F("Bearer ") + accessToken.first);
+      httpClient.addHeader("Authorization", "Bearer " + accessToken.first);
       int ret = httpClient.GET();
       
       if (ret == HTTP_CODE_OK) {
         // Prepare filter      
         DynamicJsonDocument filter(80);
-        filter[F("id")] = true;
-        filter[F("name")] = true;
-        filter[F("ip")] = true;
-        filter[F("version")] = true;
+        filter["id"] = true;
+        filter["name"] = true;
+        filter["ip"] = true;
+        filter["version"] = true;
 
         // Read json from stream in chunks
         httpClient.getStream().find('[');

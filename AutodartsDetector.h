@@ -1,3 +1,4 @@
+#include "WString.h"
 #ifndef AutodartsDetector_h_
 #define AutodartsDetector_h_
 
@@ -35,15 +36,15 @@ namespace autodarts {
     }
 
     void fromJson(const JsonObjectConst& root) {
-      if (root[F("type")] == F("state")) {
+      if (root["type"] == "state") {
         _wasConnected = _isConnected;
         _wasRunning   = _isRunning;
 
-        _isConnected = root[F("data")][F("connected")];
-        _isRunning   = root[F("data")][F("running")];
-        _numThrows   = root[F("data")][F("numThrows")];
-        _status.fromString(root[F("data")][F("status")]);
-        _event.fromString(root[F("data")][F("event")]);
+        _isConnected = root["data"]["connected"];
+        _isRunning   = root["data"]["running"];
+        _numThrows   = root["data"]["numThrows"];
+        _status.fromString(root["data"]["status"]);
+        _event.fromString(root["data"]["event"]);
 
         State connected = static_cast<State>(2*_isConnected - _wasConnected);
         State running   = static_cast<State>(2*_isRunning   - _wasRunning);
@@ -56,13 +57,13 @@ namespace autodarts {
     }
 
     void toJson(JsonObject& root) const {
-      JsonObject data = root.createNestedObject(F("data"));
-      data[F("connected")] = _isConnected;
-      data[F("running")]   = _isRunning;
-      data[F("status")]    = _status.toString();
-      data[F("event")]     = _event.toString();
-      data[F("numThrows")] = _numThrows;
-      root[F("type")]      = F("state");
+      JsonObject data = root.createNestedObject("data");
+      data["connected"] = _isConnected;
+      data["running"]   = _isRunning;
+      data["status"]    = _status.toString();
+      data["event"]     = _event.toString();
+      data["numThrows"] = _numThrows;
+      root["type"]      = "state";
     }
 
     void onCameraStats(CameraStatsCallback callback) {

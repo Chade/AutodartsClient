@@ -5,8 +5,6 @@
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 #include <EasyLogger.h>
 
-SET_LOOP_TASK_STACK_SIZE(16*1024); // 16KB
-
 namespace autodarts {
 
   class Board;
@@ -162,14 +160,14 @@ namespace autodarts {
   typedef std::function<void(State connected)>                                      BoardConnectionCallback;
   typedef std::function<void(const Board& board)>                                   BoardCallback;
 
-  static const char* AUTODARTS_URL                   = F("https://autodarts.io");
-  static const char* AUTODARTS_AUTH_KEYCLOAK_URL     = F("https://login.autodarts.io/realms/autodarts/protocol/openid-connect/token");
-  static const char* AUTODARTS_AUTH_KEYCLOAK_REQUEST = F("client_id=autodarts-app&scope=openid&grant_type=password&username=%s&password=%s");
-  static const char* AUTODARTS_API_MATCHES_URL       = F("https://api.autodarts.io/gs/v0/matches");
-  static const char* AUTODARTS_API_BOARDS_URL        = F("https://api.autodarts.io/bs/v0/boards");
-  static const char* AUTODARTS_API_TICKET_URL        = F("https://api.autodarts.io/ms/v0/ticket");
-  static const char* AUTODARTS_WS_SECURE_URL         = F("ws://api.autodarts.io/ms/v0/subscribe?ticket=");
-  static const char* AUTODARTS_WS_LOCAL_URL          = F("ws://%s/api/events");
+  static const char* AUTODARTS_URL                   = "https://autodarts.io";
+  static const char* AUTODARTS_AUTH_KEYCLOAK_URL     = "https://login.autodarts.io/realms/autodarts/protocol/openid-connect/token";
+  static const char* AUTODARTS_AUTH_KEYCLOAK_REQUEST = "client_id=autodarts-app&scope=openid&grant_type=password&username=%s&password=%s";
+  static const char* AUTODARTS_API_MATCHES_URL       = "https://api.autodarts.io/gs/v0/matches";
+  static const char* AUTODARTS_API_BOARDS_URL        = "https://api.autodarts.io/bs/v0/boards";
+  static const char* AUTODARTS_API_TICKET_URL        = "https://api.autodarts.io/ms/v0/ticket";
+  static const char* AUTODARTS_WS_SECURE_URL         = "ws://api.autodarts.io/ms/v0/subscribe?ticket=";
+  static const char* AUTODARTS_WS_LOCAL_URL          = "ws://%s/api/events";
 };
 
 #endif // AutodartsDefines_h_

@@ -3,11 +3,12 @@
 
 #include <ArduinoJson.h>
 
+#define ALTERNATE_WEBSOCKET
+#ifdef ALTERNATE_WEBSOCKET
 #include <WebSocketsClient.h>
-/*
+#else
 #include <ArduinoWebsockets.h>
-*/
-
+#endif
 
 #include "AutodartsDefines.h"
 #include "AutodartsDetector.h"
@@ -68,6 +69,7 @@ namespace autodarts {
       return _open;
     }
 
+#ifdef ALTERNATE_WEBSOCKET
     bool open(bool force = false) {
       // Check if already open
       if (!force && isOpen()) {
@@ -79,9 +81,14 @@ namespace autodarts {
         return false;
       }
 
+      // Split url
+      int index = _url.indexOf(':');
+      String address = _url.substring(0, index);
+      int port = _url.substring(index+1).toInt();
+
       // Open websocket
       LOG_DEBUG(_name.c_str(), F("Opening connection"));
-      _websocket.begin("192.168.178.89", 3180, "/api/events");
+      _websocket.begin(address, port, "/api/events");
 
       // Register event callback
       _websocket.onEvent([this](WStype_t type, uint8_t * payload, size_t length) {
@@ -100,7 +107,7 @@ namespace autodarts {
           }
           case WStype_TEXT: {
             LOG_DEBUG(_name.c_str(), F("Received data"));
-            StaticJsonDocument<2048> json;
+            DynamicJsonDocument json(2048);
             deserializeJson(json, payload);
             _detector.fromJson(json.as<JsonObjectConst>());
             _onDataCallback(*this);
@@ -122,7 +129,7 @@ namespace autodarts {
 
       return true;
     }
-/*
+#else
     bool open(bool force = false) {
       // Check if already open
       if (!force && isOpen()) {
@@ -137,7 +144,7 @@ namespace autodarts {
       // Register message callback
       _websocket.onMessage([this](websockets::WebsocketsMessage message) {
         LOG_DEBUG(_name.c_str(), F("Received data"));
-        StaticJsonDocument<2048> json;
+        DynamicJsonDocument json(2048);
         deserializeJson(json, message.data());
         _detector.fromJson(json.as<JsonObjectConst>());
         _onDataCallback(*this);
@@ -154,10 +161,6 @@ namespace autodarts {
             LOG_DEBUG(_name.c_str(), F("Connection closed"));
             _open = false;
             _onConnectionChangeCallback(*this);
-        } else if(event == websockets::WebsocketsEvent::GotPing) {
-            LOG_DEBUG(_name.c_str(), F("Ping"));
-        } else if(event == websockets::WebsocketsEvent::GotPong) {
-            LOG_DEBUG(_name.c_str(), F("Pong"));
         }
         resetAlive();
       });
@@ -167,23 +170,27 @@ namespace autodarts {
       sprintf(websocketUrl, AUTODARTS_WS_LOCAL_URL, _url.c_str());
       return _websocket.connect(websocketUrl);
     }
-*/
+#endif
+
+
 
     void close() {
+#ifdef ALTERNATE_WEBSOCKET
       _websocket.disconnect();
-/*
+#else
       _websocket.close();
-*/
+#endif
       _open = false;
     }
 
     bool update() {
+#ifdef ALTERNATE_WEBSOCKET
       _websocket.loop();
-/*
+#else
       if(_websocket.available() && _websocket.poll()) {
         return true;
       }
-*/
+#endif
 
       if (isOpen() && !isAlive()) {
         LOG_ERROR(_name.c_str(), F("Connection timeout!"));
@@ -202,17 +209,17 @@ namespace autodarts {
     }
 
     void fromJson(const JsonObjectConst& root) {
-      _id      = String(root[F("id")].as<const char*>());
-      _name    = String(root[F("name")].as<const char*>());
-      _url     = String(root[F("ip")].as<const char*>());
-      _version = String(root[F("version")].as<const char*>());
+      _id      = String(root["id"].as<const char*>());
+      _name    = String(root["name"].as<const char*>());
+      _url     = String(root["ip"].as<const char*>());
+      _version = String(root["version"].as<const char*>());
     }
 
     void toJson(JsonObject& root) const {
-      root[F("id")]      = _id.c_str();
-      root[F("name")]    = _name.c_str();
-      root[F("ip")]      = _url.c_str();
-      root[F("version")] = _version.c_str();
+      root["id"]      = _id.c_str();
+      root["name"]    = _name.c_str();
+      root["ip"]      = _url.c_str();
+      root["version"] = _version.c_str();
     }
 
     void onData(BoardCallback callback) {
@@ -248,11 +255,11 @@ namespace autodarts {
     uint64_t _lastAlive = 0;
     Detector _detector;
 
-
+#ifdef ALTERNATE_WEBSOCKET
     WebSocketsClient _websocket;
-/*
+#else
     websockets::WebsocketsClient _websocket;
-*/
+#endif
 
     BoardCallback             _onDataCallback              = [this](const Board&){};
     BoardCallback             _onConnectionChangeCallback  = [this](const Board&){};
